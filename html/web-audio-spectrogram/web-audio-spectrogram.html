@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Spectrogram</title>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+    box-sizing: border-box;
+    background:green; margin: 0px;
+    color: white;
+    overflow: hidden;
+    height: 100vh;
+    font-family: 'Roboto Mono', monospace;
+}
+
+canvas {
+    width: 100vw; 
+    height:100vh;
+    background:black;
+    z-index: 10;
+}
+
+#d {
+    position: absolute;
+    z-index: 100;
+    top:0;
+    left:0;
+    background: none
+}
+</style>
+
+<script src='js/swissgl.js'></script>
+<script src='js/spectrogram.js'></script>
+
+</head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="d"></canvas>
+<script>
+    'use strict';
+
+    //configuration
+    var midiKeyStart = 36.0;
+    var midiKeyStop = 120.0;
+    var midiKeyRange = midiKeyStop - midiKeyStart;
+    
+    const canvas = document.getElementById('c');
+    const glslCtx = SwissGL(canvas);
+    const spectro = new Spectrogram(glslCtx,midiKeyStart,midiKeyStop);
+
+    function adjustCanvas() {
+        const dpr = 1;//devicePixelRatio;
+        const w = canvas.clientWidth*dpr, h=canvas.clientHeight*dpr;
+        if (canvas.width != w || canvas.height != h) {
+            canvas.width = w; canvas.height = h;
+        }
+    }
+    
+    function render(t) {
+        adjustCanvas();
+        spectro.frame(glslCtx, t/1000.0);
+        requestAnimationFrame(render);
+    }
+
+    
+    render();
+
+
+    //overlay with labels
+    var labelsCanvas = document.getElementById("d");
+    var labelsContext = labelsCanvas.getContext("2d");
+
+    function midiKeyToHz(midiKey){
+        return 440.0 * Math.pow(2,(midiKey-69)/12)
+    }
+
+    function adjustLabelCanvas(){
+        const dpr = 1;//devicePixelRatio;
+        const w = labelsCanvas.clientWidth*dpr, h=canvas.clientHeight*dpr;
+        if (labelsCanvas.width != w || labelsCanvas.height != h) {
+            labelsCanvas.width = w; labelsCanvas.height = h;
+        }
+    }
+
+    adjustLabelCanvas();
+    
+    window.addEventListener('mousemove', drawMouseLabel, false);
+    window.addEventListener("resize", adjustLabelCanvas);
+
+    function getMousePos(canvas, evt) {
+        var rect = canvas.getBoundingClientRect();
+        return {
+          x: evt.clientX - rect.left,
+          y: evt.clientY - rect.top
+        };
+    }
+
+    function drawMouseLabel(e) {
+        var pos = getMousePos(labelsCanvas, e);
+        let posx = pos.x;
+        let posy = pos.y;
+
+        labelsContext.clearRect(0, 0, labelsCanvas.width,labelsCanvas.height);
+        labelsContext.beginPath();
+
+        labelsContext.fillStyle = 'black';
+        labelsContext.strokeStyle="black";
+
+        labelsContext.lineWidth=2;
+        labelsContext.setLineDash([5, 7]);
+        labelsContext.moveTo(0,  posy);
+        labelsContext.lineTo(labelsCanvas.width,  posy);
+        labelsContext.stroke();
+
+        var percent = posy / labelsCanvas.height;
+        var currentMidiKey = midiKeyStart + (1-percent) * midiKeyRange;
+        var currentFrequencyInHz = midiKeyToHz(currentMidiKey);
+
+        labelsContext.font = '20px "Arial"';
+        // Draw the value.
+
+        labelsContext.textAlign = 'right';
+        labelsContext.fillText(Number(currentMidiKey).toFixed(2), 78 ,  25);
+        labelsContext.fillText(Number(currentFrequencyInHz).toFixed(2), 78 ,  55);
+
+        labelsContext.textAlign = 'left';
+        labelsContext.fillText("Midicent", 83,25)
+        labelsContext.fillText("Hz", 83 ,  55);
+
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+
+h1. Gabber -  High resolution spectral transforms for the web
+
+This library makes fine grained constant-Q spectral representations of audio signals easy in the browser. The spectral transform can be visualized or further processed in a (Music Information Retrieval) processing chain.
+
+The calculation of a "Gabor transform":https://en.wikipedia.org/wiki/Gabor_transform is done by a C++ library named "Gaborator":http://gaborator.com. A WASM bridge to the C++ Gaborator is provided here.
+
+For more information on the Gaborator C++ library by  Andreas Gustafsson, please see the "gaborator.com":http://gaborator.com website or a talk by the author on the library called "Exploring time-frequency space with the Gaborator":https://www.youtube.com/watch?v=ONJVJBmFiuE
+
+While the gaborator allows reversible transforms, only a forward transform (from time domain to the spectral domain) is currently supported by Gabber.
+
+
+h2. Live demo
+
+If you have a device with a microphone, go to the "Gabber live demo":https://0110.be/attachment/cors/2023.02-gabber/gabber.html to try it out. If all goes well it should look similar to the screenshot below:
+
+!./media/gabber_constant_q_in_the_browser.png(Gabber Constant-Q transform in the browser)!:https://0110.be/attachment/cors/2023.02-gabber/gabber.html
+
+
+h2. Contents of this repository & Building
+
+* An "AudioWorklet":https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet to bridge the Web Audio API with the WASM library.
+* A bit of C++ which makes calling the library from javascript more straightforward.
+* A visualisation with WebGL2 which shows the transform efficiently.
+
+The javascript parts of Gabber are 'buildless'. Just modify the code and start a webserver. The WASM part needs to be compiled. This is done with "Emscripten":https://emscripten.org/.  The following builds the WASM library, starts a webserver and opens the Gabber URL.
+
+<pre>
+make 
+cd html
+python cors_serve.py &
+open 'http://localhost:8008'
+</pre> 
+
+h2. Why Gabber?
+
+I was looking for a fast visualization of constant-Q spectral information mainly for educational purposes and did not find a suitable alternative. "Spectro":https://github.com/calebj0seph/spectro comes close but does not support Constant-Q transforms.
+
+
+h2. Limitations
+
+To use WebAssembly modules in browsers "CORS":https://en.wikipedia.org/wiki/Cross-origin_resource_sharing needs to be configured correctly on your web server. A working configuration sets these headers: <tt>'Cross-Origin-Embedder-Policy' => 'require-corp'</tt> and <tt>'Cross-Origin-Opener-Policy' => 'same-origin'</tt>.
+
+Only forward transforms are currently supported since I am manly interested in analysis and not in synthesis.
+
+It is currently difficult to plot additional information ontop of the spectrogram due to the fact that the axis are dependent on the aspect ratio and the fps of the visualization. This needs to be fixed.
+
+h2. Credits & Licenses
+
+* "Gaborator":https://gaborator.org/  __' a C++ library that generates constant-Q spectrograms for the visualization and analysis of audio signals'__ GNU Affero General Public License, version 3 (AGPLv3).
+* "SwissGL: Swiss Army knife for WebGL2":https://github.com/google/swissgl This project was based on the "SwissGL spectrogram example":https://github.com/google/swissgl/blob/main/demo/Spectrogram.js.
+
+To keep the spirit of the Gaborator library, Gabber is also released under AGPL.
+
+Gabber by Joren Six at IPEM, Ghent University. The Ghent University BOF funded project PaPiOM allows me work on these topics.

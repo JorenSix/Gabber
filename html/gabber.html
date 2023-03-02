@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Gabber Constant-Q Transform</title>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+    box-sizing: border-box;
+    background:green; margin: 0px;
+    color: white;
+    overflow: hidden;
+    height: 100vh;
+    font-family: 'Roboto Mono', monospace;
+}
+
+canvas {
+    width: 100vw; 
+    height:100vh;
+    background:white;
+    z-index: 10;
+}
+
+#d {
+    position: absolute;
+    z-index: 100;
+    top:0;
+    left:0;
+    background: none
+}
+
+fieldset{
+    border:1px solid black;
+    position: absolute;
+    top:10px;
+    right:10px;
+    width: 13rem;
+    z-index: 200;
+    color: black;
+}
+label{display: block;}
+input{width: 100%}
+</style>
+
+<script src='js/swissgl.js'></script>
+<script src='js/gabber.js'></script>
+
+</head>
+<body>
+
+<fieldset>
+
+    <label for="bands_per_octave_slider"><span id="bands_per_octave_value">36</span> bins per octave:</label>
+    <input type="range" id="bands_per_octave_slider" name="bands_per_octave_slider" min="4" max="60">
+    <label for="min_freq_slider">Min f (midi key <span id="min_freq_value">48</span>):</label>
+    <input type="range" id="min_freq_slider" value="48" name="min_freq_slider" min="24" max="60">
+    <label for="max_freq_slider">Max f (midi key <span id="max_freq_value">132</span>):</label>
+    <input type="range" id="max_freq_slider" name="max_freq_slider" value="132" min="62" max="135">
+
+  
+    <button id="toggle_audio">Start</button>
+
+    <hr>
+
+    <label for="perspective_slider">Perspective (<span id="perspective_value">30</span>%):</label>
+    <input type="range" id="perspective_slider" name="perspective_slider" value="30" min="0" max="100">
+
+</fieldset>
+<canvas id="c"></canvas>
+<canvas id="d"></canvas>
+<script>
+    'use strict';
+
+    //configuration
+    let bandsPerOctave = 60.0;
+    let midiKeyStart = 48.0;
+    let midiKeyStop = 132.0;
+    let perspective = 0.3;
+    let midiKeyRange = midiKeyStop - midiKeyStart;
+    
+    const canvas = document.getElementById('c');
+    const glslCtx = SwissGL(canvas);
+
+    var gabber = null;
+
+    function adjustCanvas() {
+        const dpr = 1;//devicePixelRatio;
+        const w = canvas.clientWidth*dpr, h=canvas.clientHeight*dpr;
+        if (canvas.width != w || canvas.height != h) {
+            canvas.width = w; canvas.height = h;
+        }
+    }
+    
+    function render(t) {
+        adjustCanvas();
+        if(gabber !=null)
+            gabber.frame(glslCtx, perspective);
+        requestAnimationFrame(render);
+    }
+
+    function startOrStopGabber(){
+        console.log('Button clicked');
+        if(gabber == null){
+            gabber = new Gabber(midiKeyStart,midiKeyStop,bandsPerOctave);
+            button.innerText="Stop";
+
+        } else {
+            gabber.free();
+            gabber = null;
+            button.innerText="Start";
+        }
+    }
+
+    const button = document.getElementById('toggle_audio');
+    button.addEventListener('click', startOrStopGabber);
+
+    //overlay with labels
+
+    var labelsCanvas = document.getElementById("d");
+    var labelsContext = labelsCanvas.getContext("2d");
+
+    function midiKeyToHz(midiKey){
+        return 440.0 * Math.pow(2,(midiKey-69)/12)
+    }
+
+    function adjustLabelCanvas(){
+        const dpr = 1;//devicePixelRatio;
+        const w = labelsCanvas.clientWidth*dpr, h=canvas.clientHeight*dpr;
+        if (labelsCanvas.width != w || labelsCanvas.height != h) {
+            labelsCanvas.width = w; labelsCanvas.height = h;
+        }
+    }
+    adjustLabelCanvas();
+
+    render();
+
+
+    let bands_per_octave_slider = document.getElementById('bands_per_octave_slider');
+    let bands_per_octave_value = document.getElementById('bands_per_octave_value');
+    bands_per_octave_slider.addEventListener('input',(e) => {
+        bands_per_octave_value.innerHTML = e.target.value;
+        bandsPerOctave = parseFloat(e.target.value); 
+    });
+
+    let min_freq_slider = document.getElementById('min_freq_slider');
+    let min_freq_value = document.getElementById('min_freq_value');
+    min_freq_slider.addEventListener('input',(e) => {
+        min_freq_value.innerHTML = e.target.value;
+        midiKeyStart= parseFloat(e.target.value);
+        midiKeyRange = midiKeyStop - midiKeyStart;
+    });
+
+    let max_freq_slider = document.getElementById('max_freq_slider');
+    let max_freq_value = document.getElementById('max_freq_value');
+    max_freq_slider.addEventListener('input',(e) => {
+        max_freq_value.innerHTML = e.target.value;
+        midiKeyStop= parseFloat(e.target.value);
+        midiKeyRange = midiKeyStop - midiKeyStart; 
+    });
+
+    let perspective_slider = document.getElementById('perspective_slider');
+    let perspective_value = document.getElementById('perspective_value');
+    perspective_slider.addEventListener('input',(e) => {
+        perspective_value.innerHTML = e.target.value;
+        perspective = parseFloat(e.target.value)/100.0;
+    });
+
+
+    window.addEventListener('mousemove', drawMouseLabel, false);
+    window.addEventListener("resize", adjustLabelCanvas);
+
+    function getMousePos(canvas, evt) {
+        var rect = canvas.getBoundingClientRect();
+        return {
+          x: evt.clientX - rect.left,
+          y: evt.clientY - rect.top
+        };
+    }
+
+    function drawMouseLabel(e) {
+        var pos = getMousePos(labelsCanvas, e);
+        let posx = pos.x;
+        let posy = pos.y;
+
+        labelsContext.clearRect(0, 0, labelsCanvas.width,labelsCanvas.height);
+        labelsContext.beginPath();
+
+        labelsContext.fillStyle = 'black';
+        labelsContext.strokeStyle="black";
+
+        labelsContext.lineWidth=2;
+        labelsContext.setLineDash([5, 7]);
+        labelsContext.moveTo(0,  posy);
+        labelsContext.lineTo(labelsCanvas.width,  posy);
+        labelsContext.stroke();
+
+        var percent = posy / labelsCanvas.height;
+        var currentMidiKey = midiKeyStart + (1-percent) * midiKeyRange;
+        var currentFrequencyInHz = midiKeyToHz(currentMidiKey);
+
+        labelsContext.font = '20px "Arial"';
+        // Draw the value.
+
+        labelsContext.textAlign = 'right';
+        labelsContext.fillText(Number(currentMidiKey).toFixed(2), 78 ,  25);
+        labelsContext.fillText(Number(currentFrequencyInHz).toFixed(2), 78 ,  55);
+
+        labelsContext.textAlign = 'left';
+        labelsContext.fillText("Midicent", 83,25)
+        labelsContext.fillText("Hz", 83 ,  55);
+
+    }
+</script>
+
+</body>
+</html>
