@@ -59,7 +59,7 @@ input{width: 100%}
     <input type="range" id="max_freq_slider" name="max_freq_slider" value="132" min="62" max="135">
 
   
-    <button id="toggle_audio">Start</button>
+    <button id="toggle_audio">Start</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button title="fullscreen" onclick="fullscreen()"">Fullscreen</button>
 
     <hr>
 
@@ -90,6 +90,11 @@ input{width: 100%}
         if (canvas.width != w || canvas.height != h) {
             canvas.width = w; canvas.height = h;
         }
+    }
+
+    function fullscreen() {
+        const f = canvas.requestFullscreen || canvas.webkitRequestFullscreen;
+        if (f) f.apply(canvas);
     }
     
     function render(t) {
